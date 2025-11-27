@@ -1,0 +1,16 @@
+{
+  "name": "@syndual/zk",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "ts-node src/build.ts",
+    "test": "echo \"no tests yet\""
+  },
+  "dependencies": {
+    "@syndual/core-types": "workspace:*"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@syndual/sdk",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "echo \"no tests yet\"",
+    "lint": "eslint --ext .ts src"
+  },
+  "dependencies": {
+    "@syndual/core-types": "workspace:*",
+    "@syndual/zk": "workspace:*",
+    "ethers": "^6.10.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

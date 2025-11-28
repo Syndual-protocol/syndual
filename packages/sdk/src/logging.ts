@@ -168,7 +168,7 @@ export class Logger {
   }
 
   /**
-   * Adds default console formatter
+   * Adds default console formatter.
    */
   private addDefaultFormatters(): void {
     this.addFormatter((entry) => {

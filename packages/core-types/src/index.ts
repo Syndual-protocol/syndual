@@ -152,6 +152,7 @@ export interface ProofConfig {
   zkeyPath: string;
   timeout?: number;
   debug?: boolean;
+  parallel?: boolean;
 }
 
 /**

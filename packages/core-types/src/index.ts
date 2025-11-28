@@ -82,6 +82,7 @@ export enum ProofType {
   QSTREAM = 'QSTREAM',
   HYBRID = 'HYBRID',
   SETTLEMENT = 'SETTLEMENT',
+  MERKLE_BATCH = 'MERKLE_BATCH',
 }
 
 /**

@@ -78,6 +78,49 @@ interface BatchProofResponse {
   timestamp: number;
 }
 
+interface StreamInfoRequest {
+  streamId: string;
+}
+
+interface StreamInfoResponse {
+  streamId: string;
+  from: string;
+  to: string;
+  ratePerSecond: string;
+  start: number;
+  end: number;
+  status: string;
+  progress: number;
+  totalFlowed: string;
+  remainingAmount: string;
+  timestamp: number;
+}
+
+interface ProofStatsResponse {
+  totalProofsGenerated: number;
+  totalProofsVerified: number;
+  successRate: number;
+  averageGenerationTime: number;
+  averageVerificationTime: number;
+  timestamp: number;
+}
+
+interface ConfigResponse {
+  version: string;
+  features: {
+    dualState: boolean;
+    qstream: boolean;
+    hybridProofs: boolean;
+    batchProcessing: boolean;
+  };
+  limits: {
+    maxProofSize: number;
+    maxBatchSize: number;
+    maxStreamsPerBatch: number;
+  };
+  timestamp: number;
+}
+
 interface ErrorResponse extends ProtocolError {
   requestId: string;
 }

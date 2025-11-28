@@ -349,3 +349,21 @@ export async function batchValidateProofs(
   );
 }
 
+export async function submitDualStateBatch(
+  batch: DualStateBatch,
+  signer: Signer,
+  engineAddress: string,
+): Promise<string> {
+  const contract = new Contract(
+    engineAddress,
+    DUAL_STATE_ENGINE_ABI,
+    signer,
+  );
+
+  const tx = await contract.batchSetDualStates(
+    batch.states.map((s: DualState) => ({ state0: s.state0, state1: s.state1 })),
+  );
+
+  const receipt = await tx.wait();
+  return receipt?.hash || "";
+}

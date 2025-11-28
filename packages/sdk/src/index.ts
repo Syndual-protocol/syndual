@@ -802,114 +802,21 @@ export class BatchStreamManager {
   }
 }
 
-// ==================== Re-exports for convenience ====================
+// ==================== Package Version & Info ====================
 
-// Export all public types and interfaces
-export {
-  ContractAddresses,
-  DualState,
-  DualStateProof,
-  QStreamProof,
-  Stream,
-  HybridProof,
-  StreamStatus,
-  ValidationResult,
-  OperationStatus,
-  StreamSettlement,
-  Account,
-  ProofType,
-  DualStateBatch,
-  StreamQuery,
-  ProtocolError,
-  TransactionResult,
-} from "@syndual/core-types";
+export const SDK_VERSION = "1.0.0";
+export const SDK_NAME = "syndual-sdk";
 
-// Export error handling utilities
-export {
-  withRetry,
-  retryable,
-  classifyError,
-  CircuitBreaker,
-  CircuitBreakerState,
-  BulkOperationHandler,
-  HealthChecker,
-  withFallback,
-  withFallbacks,
-  DEFAULT_RETRY_OPTIONS,
-  ErrorSeverity,
-} from "./errorHandling";
-
-// Export caching utilities
-export {
-  Cache,
-  ProofCache,
-  StreamCache,
-  ProtocolCacheManager,
-  EvictionPolicy,
-  CacheStats,
-} from "./cache";
-
-// Export logging utilities
-export {
-  Logger,
-  ProtocolLogger,
-  getGlobalLogger,
-  initializeGlobalLogger,
-  ConsoleTransport,
-  BufferTransport,
-  LogLevel,
-} from "./logging";
-
-// Export metrics utilities
-export {
-  Gauge,
-  Counter,
-  Histogram,
-  MetricsRegistry,
-  ProtocolMetrics,
-  getMetrics,
-  initializeMetrics,
-} from "./metrics";
-
-// Export configuration utilities
-export {
-  validateConfig,
-  loadConfigFromEnv,
-  createDevConfig,
-  createProdConfig,
-  getFeatureFlags,
-  ProtocolInitializer,
-  PROTOCOL_PARAMETERS,
-  EnvironmentConfig,
-  FeatureFlags,
-} from "./config";
-
-// Export managers
-export {
-  AccountManager,
-  StreamManager,
-  BatchStreamManager,
-};
-
-// Export all validators and utilities
-export {
-  validateDualStateProof,
-  validateQStreamProof,
-  validateStream,
-  calculateStreamFlow,
-  calculateRemainingFlow,
-  getStreamStatus,
-  hashDualState,
-  createHybridProof,
-  validateHybridProof,
-  estimateStreamCost,
-  estimateSettlementProofs,
-  batchValidateProofs,
-  submitDualStateBatch,
-  isStreamActive,
-  getStreamProgress,
-  formatStreamAmount,
-  parseStreamAmount,
-  SynDualClient,
-  SynDualClientConfig,
+export const sdkInfo = {
+  name: SDK_NAME,
+  version: SDK_VERSION,
+  description: "Syndual Protocol SDK - Zero-Knowledge Dual-State and QStream Payments",
+  features: [
+    "Dual-state cryptography with ZK proofs",
+    "Quantum-inspired payment streams",
+    "Hybrid proof generation and verification",
+    "Account and stream lifecycle management",
+    "Comprehensive caching and metrics",
+    "Error recovery and retry mechanisms",
+  ],
 };

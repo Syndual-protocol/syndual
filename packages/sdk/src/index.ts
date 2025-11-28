@@ -393,6 +393,13 @@ export async function validateHybridProof(proof: HybridProof): Promise<Validatio
   };
 }
 
+/**
+ * Estimates the total cost of a payment stream.
+ * 
+ * @param ratePerSecond - Payment rate in base units per second
+ * @param durationSeconds - Stream duration in seconds
+ * @returns Total cost as bigint
+ */
 export function estimateStreamCost(
   ratePerSecond: bigint,
   durationSeconds: bigint,
@@ -400,10 +407,23 @@ export function estimateStreamCost(
   return ratePerSecond * durationSeconds;
 }
 
+/**
+ * Estimates the number of settlement proofs needed for a batch of streams.
+ * Calculates merkle tree depth based on stream count.
+ * 
+ * @param numberOfStreams - Total number of streams in batch
+ * @returns Estimated proof count (log2 of stream count + 1)
+ */
 export function estimateSettlementProofs(numberOfStreams: number): number {
   return Math.ceil(Math.log2(numberOfStreams)) + 1;
 }
 
+/**
+ * Validates multiple proofs in parallel.
+ * 
+ * @param proofs - Array of proofs to validate
+ * @returns Array of validation results
+ */
 export async function batchValidateProofs(
   proofs: (DualStateProof | QStreamProof)[],
 ): Promise<ValidationResult[]> {
@@ -417,6 +437,15 @@ export async function batchValidateProofs(
   );
 }
 
+/**
+ * Submits a batch of dual-state transitions to the contract.
+ * 
+ * @param batch - The dual state batch to submit
+ * @param signer - Signer to use for transaction
+ * @param engineAddress - Address of dual-state engine contract
+ * @returns Transaction hash
+ * @throws If batch is invalid or transaction fails
+ */
 export async function submitDualStateBatch(
   batch: DualStateBatch,
   signer: Signer,

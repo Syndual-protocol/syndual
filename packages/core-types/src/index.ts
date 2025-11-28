@@ -61,7 +61,7 @@ export interface TransactionResult {
   hash: string;
   blockNumber?: number;
   gasUsed?: bigint;
-  status?: 'success' | 'failed' | 'pending';
+  status?: 'success' | 'failed' | 'pending' | 'reverted';
 }
 
 /**

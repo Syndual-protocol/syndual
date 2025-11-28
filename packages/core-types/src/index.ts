@@ -95,6 +95,7 @@ export enum StreamStatus {
   SETTLED = 'SETTLED',
   CANCELLED = 'CANCELLED',
   EXPIRED = 'EXPIRED',
+  WITHDRAWN = 'WITHDRAWN',
 }
 
 /**

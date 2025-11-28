@@ -165,6 +165,12 @@ export async function validateDualStateProof(proof: DualStateProof): Promise<Val
   };
 }
 
+/**
+ * Validates a quantum stream proof for cryptographic integrity.
+ * 
+ * @param proof - The quantum stream proof to validate
+ * @returns Promise resolving to validation result
+ */
 export async function validateQStreamProof(proof: QStreamProof): Promise<ValidationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];

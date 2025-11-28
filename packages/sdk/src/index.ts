@@ -368,3 +368,35 @@ export async function submitDualStateBatch(
   const receipt = await tx.wait();
   return receipt?.hash || "";
 }
+
+export function isStreamActive(stream: Stream, currentTime: number): boolean {
+  const current = BigInt(currentTime);
+  return current >= stream.start && current < stream.end && !stream.paused;
+}
+
+export function getStreamProgress(stream: Stream, currentTime: number): number {
+  const current = BigInt(currentTime);
+  const duration = stream.end - stream.start;
+  
+  if (current <= stream.start) return 0;
+  if (current >= stream.end) return 100;
+  
+  const elapsed = current - stream.start;
+  return Math.round((Number(elapsed) / Number(duration)) * 100);
+}
+
+export function formatStreamAmount(amount: bigint, decimals: number = 18): string {
+  const divisor = BigInt(10 ** decimals);
+  const integerPart = amount / divisor;
+  const fractionalPart = amount % divisor;
+  const fractionalStr = fractionalPart.toString().padStart(decimals, "0");
+  return `${integerPart}.${fractionalStr}`;
+}
+
+export function parseStreamAmount(amount: string, decimals: number = 18): bigint {
+  const [integerStr, fractionalStr = "0"] = amount.split(".");
+  const integer = BigInt(integerStr || "0");
+  const fractional = BigInt(fractionalStr.padEnd(decimals, "0").slice(0, decimals));
+  return integer * BigInt(10 ** decimals) + fractional;
+}
+

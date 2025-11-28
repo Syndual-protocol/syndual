@@ -268,7 +268,7 @@ export function getStreamStatus(stream: Stream, currentTime: number): StreamStat
 
 export function hashDualState(state: DualState): string {
   const data = `${state.state0}:${state.state1}:${state.createdAt}`;
-  return ethers.keccak256(ethers.toBeHex(data));
+  return ethers.keccak256(ethers.toUtf8Bytes(data));
 }
 
 export function createHybridProof(

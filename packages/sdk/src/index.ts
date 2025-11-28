@@ -126,6 +126,13 @@ export class SynDualClient {
  * Utility functions for proof validation and stream operations
  */
 
+/**
+ * Validates the structure and cryptographic integrity of a dual-state proof.
+ * 
+ * @param proof - The dual-state proof to validate
+ * @returns Promise resolving to validation result with errors and warnings
+ * @throws Never throws; returns errors in ValidationResult instead
+ */
 export async function validateDualStateProof(proof: DualStateProof): Promise<ValidationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];

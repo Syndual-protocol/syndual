@@ -322,8 +322,9 @@ Use GitHub Issues for:
 
 ## Contact
 
-- **X (Twitter):** [@Syndual](https://x.com/Syndual) *(placeholder)*  
-- **Email:** `contact@syndual.org` *(optional placeholder)*  
+- **X (Twitter):** [@Syndual](https://x.com/Syndual) 
+- **Email:** `contact@syndual.org` 
 - **GitHub Issues:** use the repo issue tracker for bugs and contributions.
 
 ---
+

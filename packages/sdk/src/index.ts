@@ -199,6 +199,18 @@ export async function validateQStreamProof(proof: QStreamProof): Promise<Validat
   };
 }
 
+/**
+ * Validates a payment stream for correctness and realistic constraints.
+ * Checks timestamps, rates, amounts, and settlement progress.
+ * 
+ * @param stream - The stream to validate
+ * @returns Validation result with any errors or warnings found
+ * 
+ * @example
+ * const stream = createStream(to, rate, start, end);
+ * const result = validateStream(stream);
+ * if (!result.valid) console.error(result.errors);
+ */
 export function validateStream(stream: Stream): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -241,6 +253,14 @@ export function validateStream(stream: Stream): ValidationResult {
   };
 }
 
+/**
+ * Calculates the amount of funds that have flowed through a stream up to the current time.
+ * Returns 0 if stream hasn't started, total if it has ended.
+ * 
+ * @param stream - The stream to calculate flow for
+ * @param currentTime - Current time in seconds (typically Date.now() / 1000)
+ * @returns Amount of funds flowed as bigint
+ */
 export function calculateStreamFlow(stream: Stream, currentTime: number): bigint {
   const current = BigInt(currentTime);
   
@@ -255,12 +275,26 @@ export function calculateStreamFlow(stream: Stream, currentTime: number): bigint
   return stream.ratePerSecond * (current - stream.start);
 }
 
+/**
+ * Calculates the remaining funds in a stream that haven't flowed yet.
+ * 
+ * @param stream - The stream to check
+ * @param currentTime - Current time in seconds
+ * @returns Remaining funds as bigint
+ */
 export function calculateRemainingFlow(stream: Stream, currentTime: number): bigint {
   const total = calculateStreamFlow(stream, Number(stream.end));
   const flowed = calculateStreamFlow(stream, currentTime);
   return total - flowed;
 }
 
+/**
+ * Determines the current status of a stream based on its state and current time.
+ * 
+ * @param stream - The stream to check
+ * @param currentTime - Current time in seconds
+ * @returns Stream status enumeration value
+ */
 export function getStreamStatus(stream: Stream, currentTime: number): StreamStatus {
   const current = BigInt(currentTime);
   
@@ -279,11 +313,24 @@ export function getStreamStatus(stream: Stream, currentTime: number): StreamStat
   return StreamStatus.ACTIVE;
 }
 
+/**
+ * Computes a cryptographic hash of a dual state using Keccak256.
+ * 
+ * @param state - The dual state to hash
+ * @returns Hex string hash (0x prefixed)
+ */
 export function hashDualState(state: DualState): string {
   const data = `${state.state0}:${state.state1}:${state.createdAt}`;
   return ethers.keccak256(ethers.toUtf8Bytes(data));
 }
 
+/**
+ * Creates a hybrid proof combining dual-state and stream proofs.
+ * 
+ * @param dualStateProof - The dual-state proof component
+ * @param streamProof - The stream proof component
+ * @returns Combined hybrid proof with merged signals
+ */
 export function createHybridProof(
   dualStateProof: DualStateProof,
   streamProof: QStreamProof,
@@ -303,7 +350,14 @@ export function createHybridProof(
   };
 }
 
+/**
+ * Validates a hybrid proof by checking both component proofs.
+ * 
+ * @param proof - The hybrid proof to validate
+ * @returns Validation result
+ */
 export async function validateHybridProof(proof: HybridProof): Promise<ValidationResult> {
+
   const errors: string[] = [];
   
   if (!proof.id) {

@@ -465,11 +465,25 @@ export async function submitDualStateBatch(
   return receipt?.hash || "";
 }
 
+/**
+ * Checks if a stream is currently active (not paused, within time window).
+ * 
+ * @param stream - The stream to check
+ * @param currentTime - Current time in seconds
+ * @returns True if stream is active
+ */
 export function isStreamActive(stream: Stream, currentTime: number): boolean {
   const current = BigInt(currentTime);
   return current >= stream.start && current < stream.end && !stream.paused;
 }
 
+/**
+ * Calculates the progress percentage of a stream.
+ * 
+ * @param stream - The stream to check
+ * @param currentTime - Current time in seconds
+ * @returns Progress as percentage (0-100)
+ */
 export function getStreamProgress(stream: Stream, currentTime: number): number {
   const current = BigInt(currentTime);
   const duration = stream.end - stream.start;
@@ -481,6 +495,16 @@ export function getStreamProgress(stream: Stream, currentTime: number): number {
   return Math.round((Number(elapsed) / Number(duration)) * 100);
 }
 
+/**
+ * Formats a bigint amount to a human-readable decimal string.
+ * 
+ * @param amount - Amount as bigint
+ * @param decimals - Number of decimal places (default 18)
+ * @returns Formatted string with decimals
+ * 
+ * @example
+ * formatStreamAmount(1500000000000000000n, 18) // "1.5"
+ */
 export function formatStreamAmount(amount: bigint, decimals: number = 18): string {
   const divisor = BigInt(10 ** decimals);
   const integerPart = amount / divisor;
@@ -489,6 +513,16 @@ export function formatStreamAmount(amount: bigint, decimals: number = 18): strin
   return `${integerPart}.${fractionalStr}`;
 }
 
+/**
+ * Parses a decimal string to bigint with specified decimal places.
+ * 
+ * @param amount - Amount as decimal string
+ * @param decimals - Number of decimal places (default 18)
+ * @returns Amount as bigint
+ * 
+ * @example
+ * parseStreamAmount("1.5", 18) // 1500000000000000000n
+ */
 export function parseStreamAmount(amount: string, decimals: number = 18): bigint {
   const [integerStr, fractionalStr = "0"] = amount.split(".");
   const integer = BigInt(integerStr || "0");

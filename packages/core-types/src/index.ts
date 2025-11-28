@@ -117,6 +117,7 @@ export interface DualStateBatch {
   timestamp: number;
   proof?: DualStateProof;
   proofType?: ProofType;
+  verified: boolean;
 }
 
 /**

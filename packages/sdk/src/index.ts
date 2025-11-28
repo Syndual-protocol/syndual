@@ -5,6 +5,13 @@ import {
   DualStateProof,
   QStreamProof,
   Stream,
+  HybridProof,
+  StreamStatus,
+  ValidationResult,
+  OperationStatus,
+  StreamSettlement,
+  Account,
+  ProofType,
 } from "@syndual/core-types";
 import {
   generateDualStateProof,
@@ -112,3 +119,231 @@ export class SynDualClient {
     return proof;
   }
 }
+
+/**
+ * Utility functions for proof validation and stream operations
+ */
+
+export async function validateDualStateProof(proof: DualStateProof): Promise<ValidationResult> {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  if (!proof.proof || proof.proof.length === 0) {
+    errors.push("Proof field is empty");
+  }
+  
+  if (!proof.publicSignals || proof.publicSignals.length === 0) {
+    errors.push("Public signals are missing");
+  }
+  
+  if (proof.publicSignals.length < 2) {
+    errors.push("Expected at least 2 public signals for dual state");
+  }
+  
+  const isValid = await verifyDualStateProof(proof);
+  if (!isValid) {
+    errors.push("Proof verification failed");
+  }
+  
+  if (proof.timestamp && proof.timestamp > Date.now()) {
+    warnings.push("Proof timestamp is in the future");
+  }
+  
+  return {
+    valid: errors.length === 0 && isValid,
+    errors: errors.length > 0 ? errors : undefined,
+    warnings: warnings.length > 0 ? warnings : undefined,
+  };
+}
+
+export async function validateQStreamProof(proof: QStreamProof): Promise<ValidationResult> {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  if (!proof.proof || proof.proof.length === 0) {
+    errors.push("Proof field is empty");
+  }
+  
+  if (!proof.publicSignals || proof.publicSignals.length === 0) {
+    errors.push("Public signals are missing");
+  }
+  
+  const isValid = await verifyQStreamProof(proof);
+  if (!isValid) {
+    errors.push("Proof verification failed");
+  }
+  
+  if (proof.timestamp && proof.timestamp > Date.now()) {
+    warnings.push("Proof timestamp is in the future");
+  }
+  
+  return {
+    valid: errors.length === 0 && isValid,
+    errors: errors.length > 0 ? errors : undefined,
+    warnings: warnings.length > 0 ? warnings : undefined,
+  };
+}
+
+export function validateStream(stream: Stream): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  if (!stream.from || stream.from.length === 0) {
+    errors.push("Stream 'from' address is required");
+  }
+  
+  if (!stream.to || stream.to.length === 0) {
+    errors.push("Stream 'to' address is required");
+  }
+  
+  if (stream.ratePerSecond <= 0n) {
+    errors.push("Rate per second must be positive");
+  }
+  
+  if (stream.start >= stream.end) {
+    errors.push("Stream start time must be before end time");
+  }
+  
+  if (stream.start < 0n || stream.end < 0n) {
+    errors.push("Stream times must be non-negative");
+  }
+  
+  const duration = stream.end - stream.start;
+  const total = stream.ratePerSecond * duration;
+  
+  if (stream.total && stream.total !== total) {
+    warnings.push("Total amount does not match rate * duration");
+  }
+  
+  if (stream.settled && stream.settled > (stream.total || total)) {
+    errors.push("Settled amount exceeds total");
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors: errors.length > 0 ? errors : undefined,
+    warnings: warnings.length > 0 ? warnings : undefined,
+  };
+}
+
+export function calculateStreamFlow(stream: Stream, currentTime: number): bigint {
+  const current = BigInt(currentTime);
+  
+  if (current < stream.start) {
+    return 0n;
+  }
+  
+  if (current >= stream.end) {
+    return stream.ratePerSecond * (stream.end - stream.start);
+  }
+  
+  return stream.ratePerSecond * (current - stream.start);
+}
+
+export function calculateRemainingFlow(stream: Stream, currentTime: number): bigint {
+  const total = calculateStreamFlow(stream, Number(stream.end));
+  const flowed = calculateStreamFlow(stream, currentTime);
+  return total - flowed;
+}
+
+export function getStreamStatus(stream: Stream, currentTime: number): StreamStatus {
+  const current = BigInt(currentTime);
+  
+  if (current < stream.start) {
+    return StreamStatus.ACTIVE;
+  }
+  
+  if (current >= stream.end) {
+    if (stream.settled === (stream.ratePerSecond * (stream.end - stream.start))) {
+      return StreamStatus.SETTLED;
+    }
+    return StreamStatus.EXPIRED;
+  }
+  
+  return StreamStatus.ACTIVE;
+}
+
+export function hashDualState(state: DualState): string {
+  const data = `${state.state0}:${state.state1}:${state.createdAt}`;
+  return ethers.keccak256(ethers.toBeHex(data));
+}
+
+export function createHybridProof(
+  dualStateProof: DualStateProof,
+  streamProof: QStreamProof,
+): HybridProof {
+  const combinedSignals = [
+    ...dualStateProof.publicSignals,
+    ...streamProof.publicSignals,
+  ];
+  
+  return {
+    id: ethers.id(JSON.stringify(combinedSignals)),
+    dualStateProof,
+    streamProof,
+    combinedSignals,
+    timestamp: Date.now(),
+    verified: (dualStateProof.verified ?? false) && (streamProof.verified ?? false),
+  };
+}
+
+export async function validateHybridProof(proof: HybridProof): Promise<ValidationResult> {
+  const errors: string[] = [];
+  
+  if (!proof.id) {
+    errors.push("Hybrid proof ID is missing");
+  }
+  
+  if (!proof.dualStateProof) {
+    errors.push("Dual state proof is missing");
+  } else {
+    const dsResult = await validateDualStateProof(proof.dualStateProof);
+    if (!dsResult.valid && dsResult.errors) {
+      errors.push(`Dual state proof invalid: ${dsResult.errors.join(", ")}`);
+    }
+  }
+  
+  if (!proof.streamProof) {
+    errors.push("Stream proof is missing");
+  } else {
+    const streamResult = await validateQStreamProof(proof.streamProof);
+    if (!streamResult.valid && streamResult.errors) {
+      errors.push(`Stream proof invalid: ${streamResult.errors.join(", ")}`);
+    }
+  }
+  
+  if (!proof.combinedSignals || proof.combinedSignals.length === 0) {
+    errors.push("Combined signals are missing");
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors: errors.length > 0 ? errors : undefined,
+    verified: proof.verified,
+  };
+}
+
+export function estimateStreamCost(
+  ratePerSecond: bigint,
+  durationSeconds: bigint,
+): bigint {
+  return ratePerSecond * durationSeconds;
+}
+
+export function estimateSettlementProofs(numberOfStreams: number): number {
+  return Math.ceil(Math.log2(numberOfStreams)) + 1;
+}
+
+export async function batchValidateProofs(
+  proofs: (DualStateProof | QStreamProof)[],
+): Promise<ValidationResult[]> {
+  return Promise.all(
+    proofs.map(async (proof) => {
+      if ("from" in (proof as any)) {
+        return validateQStreamProof(proof as QStreamProof);
+      }
+      return validateDualStateProof(proof as DualStateProof);
+    }),
+  );
+}
+

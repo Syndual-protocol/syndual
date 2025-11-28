@@ -530,3 +530,275 @@ export function parseStreamAmount(amount: string, decimals: number = 18): bigint
   return integer * BigInt(10 ** decimals) + fractional;
 }
 
+// ==================== Account Management ====================
+
+/**
+ * Account state tracker with nonce management
+ */
+export class AccountManager {
+  private accounts: Map<string, Account> = new Map();
+
+  /**
+   * Creates or retrieves account info
+   */
+  getAccount(address: string): Account {
+    if (!this.accounts.has(address)) {
+      this.accounts.set(address, {
+        address,
+        nonce: 0,
+        balance: 0n,
+        streamsActive: 0,
+        totalStreamed: 0n,
+        reputation: 100,
+      });
+    }
+    return this.accounts.get(address)!;
+  }
+
+  /**
+   * Updates account balance
+   */
+  updateBalance(address: string, balance: bigint): void {
+    const account = this.getAccount(address);
+    account.balance = balance;
+  }
+
+  /**
+   * Increments nonce for transaction management
+   */
+  incrementNonce(address: string): number {
+    const account = this.getAccount(address);
+    return ++account.nonce;
+  }
+
+  /**
+   * Updates active streams count
+   */
+  updateActiveStreams(address: string, count: number): void {
+    const account = this.getAccount(address);
+    account.streamsActive = count;
+  }
+
+  /**
+   * Updates total streamed amount
+   */
+  updateTotalStreamed(address: string, amount: bigint): void {
+    const account = this.getAccount(address);
+    account.totalStreamed = amount;
+  }
+
+  /**
+   * Updates reputation score
+   */
+  updateReputation(address: string, score: number): void {
+    const account = this.getAccount(address);
+    account.reputation = Math.max(0, Math.min(100, score));
+  }
+
+  /**
+   * Gets all tracked accounts
+   */
+  getAllAccounts(): Account[] {
+    return Array.from(this.accounts.values());
+  }
+}
+
+// ==================== Stream Management ====================
+
+/**
+ * Stream state tracker and manager
+ */
+export class StreamManager {
+  private streams: Map<string, Stream & { id: string; status: StreamStatus }> = new Map();
+  private streamsByUser: Map<string, string[]> = new Map();
+
+  /**
+   * Creates or retrieves a stream
+   */
+  getStream(streamId: string): (Stream & { id: string; status: StreamStatus }) | undefined {
+    return this.streams.get(streamId);
+  }
+
+  /**
+   * Registers a new stream
+   */
+  createStream(streamId: string, stream: Stream): void {
+    this.streams.set(streamId, {
+      ...stream,
+      id: streamId,
+      status: StreamStatus.ACTIVE,
+    });
+
+    // Index by user
+    for (const user of [stream.from, stream.to]) {
+      if (!this.streamsByUser.has(user)) {
+        this.streamsByUser.set(user, []);
+      }
+      this.streamsByUser.get(user)!.push(streamId);
+    }
+  }
+
+  /**
+   * Updates stream status
+   */
+  updateStreamStatus(streamId: string, status: StreamStatus): void {
+    const stream = this.streams.get(streamId);
+    if (stream) {
+      stream.status = status;
+    }
+  }
+
+  /**
+   * Updates settlement amount
+   */
+  updateSettlement(streamId: string, settledAmount: bigint): void {
+    const stream = this.streams.get(streamId);
+    if (stream) {
+      stream.settled = settledAmount;
+    }
+  }
+
+  /**
+   * Gets streams for a user (as sender or receiver)
+   */
+  getUserStreams(address: string): (Stream & { id: string; status: StreamStatus })[] {
+    const ids = this.streamsByUser.get(address) || [];
+    return ids.map((id) => this.streams.get(id)!).filter(Boolean);
+  }
+
+  /**
+   * Gets active streams for a user
+   */
+  getActiveStreams(address: string): (Stream & { id: string; status: StreamStatus })[] {
+    return this.getUserStreams(address).filter((s) => s.status === StreamStatus.ACTIVE);
+  }
+
+  /**
+   * Gets all streams
+   */
+  getAllStreams(): (Stream & { id: string; status: StreamStatus })[] {
+    return Array.from(this.streams.values());
+  }
+
+  /**
+   * Deletes a stream from tracking
+   */
+  deleteStream(streamId: string): boolean {
+    const stream = this.streams.get(streamId);
+    if (!stream) return false;
+
+    this.streams.delete(streamId);
+
+    // Remove from user indices
+    for (const user of [stream.from, stream.to]) {
+      const ids = this.streamsByUser.get(user);
+      if (ids) {
+        const idx = ids.indexOf(streamId);
+        if (idx >= 0) {
+          ids.splice(idx, 1);
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Calculates statistics for streams
+   */
+  getStreamStats(): {
+    totalStreams: number;
+    activeStreams: number;
+    totalValue: bigint;
+    totalSettled: bigint;
+  } {
+    const all = this.getAllStreams();
+    const active = all.filter((s) => s.status === StreamStatus.ACTIVE);
+    const totalValue = all.reduce((sum, s) => sum + (s.total || 0n), 0n);
+    const totalSettled = all.reduce((sum, s) => sum + (s.settled || 0n), 0n);
+
+    return {
+      totalStreams: all.length,
+      activeStreams: active.length,
+      totalValue,
+      totalSettled,
+    };
+  }
+}
+
+// ==================== Batch Stream Operations ====================
+
+/**
+ * Batch operation manager for streams
+ */
+export class BatchStreamManager {
+  /**
+   * Validates multiple streams before batch operation
+   */
+  validateBatch(streams: Stream[]): ValidationResult {
+    const errors: string[] = [];
+
+    if (streams.length === 0) {
+      errors.push("Batch is empty");
+    }
+
+    if (streams.length > 1000) {
+      errors.push("Batch size exceeds 1000 streams");
+    }
+
+    for (let i = 0; i < streams.length; i++) {
+      const result = validateStream(streams[i]);
+      if (!result.valid && result.errors) {
+        errors.push(`Stream ${i}: ${result.errors.join(", ")}`);
+      }
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+  }
+
+  /**
+   * Calculates total batch value
+   */
+  calculateBatchValue(streams: Stream[]): bigint {
+    return streams.reduce((sum, stream) => {
+      const total = stream.ratePerSecond * (stream.end - stream.start);
+      return sum + total;
+    }, 0n);
+  }
+
+  /**
+   * Groups streams by sender
+   */
+  groupBySender(streams: Stream[]): Map<string, Stream[]> {
+    const groups = new Map<string, Stream[]>();
+
+    for (const stream of streams) {
+      if (!groups.has(stream.from)) {
+        groups.set(stream.from, []);
+      }
+      groups.get(stream.from)!.push(stream);
+    }
+
+    return groups;
+  }
+
+  /**
+   * Groups streams by receiver
+   */
+  groupByReceiver(streams: Stream[]): Map<string, Stream[]> {
+    const groups = new Map<string, Stream[]>();
+
+    for (const stream of streams) {
+      if (!groups.has(stream.to)) {
+        groups.set(stream.to, []);
+      }
+      groups.get(stream.to)!.push(stream);
+    }
+
+    return groups;
+  }
+}
+

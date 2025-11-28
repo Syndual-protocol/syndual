@@ -22,6 +22,7 @@ export interface Stream {
   end: bigint;
   total?: bigint;
   settled?: bigint;
+  paused?: boolean;
 }
 
 /**

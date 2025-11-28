@@ -12,12 +12,14 @@ import {
   StreamSettlement,
   Account,
   ProofType,
+  DualStateBatch,
 } from "@syndual/core-types";
 import {
   generateDualStateProof,
   generateQStreamProof,
   verifyDualStateProof,
   verifyQStreamProof,
+  HybridProver,
 } from "@syndual/zk";
 
 const DUAL_STATE_ENGINE_ABI = [

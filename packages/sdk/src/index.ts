@@ -256,7 +256,8 @@ export function getStreamStatus(stream: Stream, currentTime: number): StreamStat
   }
   
   if (current >= stream.end) {
-    if (stream.settled === (stream.ratePerSecond * (stream.end - stream.start))) {
+    const totalAmount = stream.ratePerSecond * (stream.end - stream.start);
+    if (stream.settled === totalAmount) {
       return StreamStatus.SETTLED;
     }
     return StreamStatus.EXPIRED;

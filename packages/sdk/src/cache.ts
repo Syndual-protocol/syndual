@@ -33,7 +33,7 @@ export class Cache<K, V> {
   private cleanupInterval: NodeJS.Timer | null = null;
 
   constructor(
-    private maxSize: number = 1000,
+    private maxSize: number = 10_00,
     private defaultTtlMs: number = 3600000, // 1 hour
     private evictionPolicy: EvictionPolicy = EvictionPolicy.LRU,
   ) {

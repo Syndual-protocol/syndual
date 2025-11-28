@@ -422,3 +422,167 @@ export class StreamValidators {
     return errors;
   }
 }
+
+// ==================== State Machine Testers ====================
+
+export class StateMachineValidator {
+  /**
+   * Validates stream state transitions
+   */
+  static validateStateTransition(
+    fromState: StreamStatus,
+    toState: StreamStatus,
+  ): boolean {
+    const validTransitions: Record<StreamStatus, StreamStatus[]> = {
+      [StreamStatus.ACTIVE]: [StreamStatus.PAUSED, StreamStatus.SETTLED, StreamStatus.CANCELLED],
+      [StreamStatus.PAUSED]: [StreamStatus.ACTIVE, StreamStatus.CANCELLED],
+      [StreamStatus.SETTLED]: [],
+      [StreamStatus.CANCELLED]: [],
+      [StreamStatus.EXPIRED]: [StreamStatus.WITHDRAWN],
+      [StreamStatus.WITHDRAWN]: [],
+    };
+
+    return validTransitions[fromState]?.includes(toState) ?? false;
+  }
+
+  /**
+   * Validates operation status transitions
+   */
+  static isValidOperationProgress(
+    from: OperationStatus,
+    to: OperationStatus,
+  ): boolean {
+    const order = [
+      OperationStatus.PENDING,
+      OperationStatus.PROCESSING,
+      OperationStatus.COMPLETED,
+    ];
+    const fromIdx = order.indexOf(from);
+    const toIdx = order.indexOf(to);
+
+    if (fromIdx === -1 || toIdx === -1) return false;
+    return toIdx >= fromIdx || to === OperationStatus.FAILED;
+  }
+}
+
+// ==================== Constants & Configuration ====================
+
+export const PROTOCOL_CONSTANTS = {
+  MIN_STREAM_DURATION: 1, // 1 second
+  MAX_STREAM_DURATION: 31536000, // 1 year in seconds
+  MIN_RATE_PER_SECOND: 1n,
+  MAX_RATE_PER_SECOND: 10n ** 27n,
+  DEFAULT_PROOF_TIMEOUT: 30000, // 30 seconds
+  MERKLE_TREE_DEPTH: 16,
+  MAX_BATCH_SIZE: 100,
+  DEFAULT_DECIMALS: 18,
+};
+
+export const PROOF_THRESHOLDS = {
+  MIN_SIGNALS: 2,
+  MIN_PROOF_SIZE: 100,
+  MAX_PROOF_SIZE: 10240,
+  SIGNAL_VALIDITY_WINDOW: 3600000, // 1 hour
+};
+
+// ==================== Utility Generators ====================
+
+export class DataGenerator {
+  /**
+   * Generates random valid stream addresses
+   */
+  static generateStreamPair(): { from: string; to: string } {
+    return {
+      from: generateRandomAddress(),
+      to: generateRandomAddress(),
+    };
+  }
+
+  /**
+   * Generates valid stream configuration
+   */
+  static generateStreamConfig(overrides?: {
+    duration?: number;
+    rate?: bigint;
+  }): { ratePerSecond: bigint; duration: bigint } {
+    const duration = overrides?.duration
+      ? BigInt(overrides.duration)
+      : BigInt(3600 + Math.floor(Math.random() * 86400)); // 1 hour to 1 day
+    const rate = overrides?.rate
+      ? overrides.rate
+      : generateRandomBigInt(1n, 10n ** 15n);
+
+    return { ratePerSecond: rate, duration };
+  }
+
+  /**
+   * Generates proof signals for testing
+   */
+  static generateProofSignals(count: number = 3): string[] {
+    return Array.from({ length: count }, () => generateRandomHash());
+  }
+
+  /**
+   * Generates a realistic settlement scenario
+   */
+  static generateSettlementScenario(): {
+    stream: Stream;
+    elapsed: number;
+    settled: bigint;
+  } {
+    const stream = MockDataFactory.createStream();
+    const now = Math.floor(Date.now() / 1000);
+    const elapsed = Math.min(
+      Number(stream.end - stream.start),
+      Math.floor(Math.random() * Number(stream.end - stream.start)),
+    );
+    const maxFlowed = stream.ratePerSecond * BigInt(elapsed);
+    const settled = BigInt(Math.floor(Math.random() * Number(maxFlowed)));
+
+    return { stream, elapsed, settled };
+  }
+}
+
+// ==================== Assertion Helpers Extension ====================
+
+export class AdvancedAssertions {
+  /**
+   * Asserts stream has valid economics
+   */
+  static assertStreamEconomics(stream: Stream): void {
+    const duration = stream.end - stream.start;
+    const expectedTotal = stream.ratePerSecond * duration;
+
+    if (stream.total && stream.total !== expectedTotal) {
+      throw new Error(
+        `Stream total ${stream.total} does not match rate × duration ${expectedTotal}`,
+      );
+    }
+
+    if (stream.settled && stream.settled > expectedTotal) {
+      throw new Error(
+        `Settled amount ${stream.settled} exceeds total ${expectedTotal}`,
+      );
+    }
+  }
+
+  /**
+   * Asserts proof batch consistency
+   */
+  static assertBatchConsistency(batch: DualStateBatch): void {
+    if (!batch.id) throw new Error("Batch must have ID");
+    if (batch.states.length === 0) throw new Error("Batch must contain states");
+    if (batch.states.length > PROTOCOL_CONSTANTS.MAX_BATCH_SIZE) {
+      throw new Error(
+        `Batch size ${batch.states.length} exceeds max ${PROTOCOL_CONSTANTS.MAX_BATCH_SIZE}`,
+      );
+    }
+
+    batch.states.forEach((state, idx) => {
+      if (!state.state0 || !state.state1) {
+        throw new Error(`State at index ${idx} has invalid dual states`);
+      }
+    });
+  }
+}
+

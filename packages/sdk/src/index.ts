@@ -235,8 +235,9 @@ export function calculateStreamFlow(stream: Stream, currentTime: number): bigint
     return 0n;
   }
   
+  const duration = stream.end - stream.start;
   if (current >= stream.end) {
-    return stream.ratePerSecond * (stream.end - stream.start);
+    return stream.ratePerSecond * duration;
   }
   
   return stream.ratePerSecond * (current - stream.start);
